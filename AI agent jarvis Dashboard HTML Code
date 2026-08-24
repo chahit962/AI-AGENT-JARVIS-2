@@ -1,0 +1,1027 @@
+ai dashboard for ppt 
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Language Insights Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    /* =============================
+       CSS VARIABLES & RESET
+    ============================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --surface2:  #1c2230;
+      --border:    #2a3347;
+      --text:      #e6edf3;
+      --muted:     #7d8da1;
+      --accent:    #f0a04b;
+      --accent2:   #5eead4;
+      --accent3:   #a78bfa;
+      --pos:       #34d399;
+      --neg:       #f87171;
+      --neu:       #fbbf24;
+      --radius:    14px;
+      --shadow:    0 4px 32px rgba(0,0,0,.45);
+      --trans:     all .3s cubic-bezier(.4,0,.2,1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* =============================
+       NOISE TEXTURE OVERLAY
+    ============================= */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: .5;
+    }
+
+    /* =============================
+       SCROLLBAR
+    ============================= */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+    /* =============================
+       LAYOUT
+    ============================= */
+    .shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px 60px;
+    }
+
+    /* =============================
+       HEADER
+    ============================= */
+    header {
+      padding: 36px 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 36px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .logo-wrap { display: flex; align-items: center; gap: 14px; }
+
+    .logo-icon {
+      width: 46px; height: 46px;
+      background: linear-gradient(135deg, var(--accent), #e07b24);
+      border-radius: 12px;
+      display: grid; place-items: center;
+      font-size: 22px;
+      box-shadow: 0 0 24px rgba(240,160,75,.35);
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      letter-spacing: -.01em;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    header h1 span { color: var(--accent); }
+
+    .header-badge {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 7px 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .pulse-dot {
+      width: 8px; height: 8px;
+      background: var(--pos);
+      border-radius: 50%;
+      animation: pulse 2s ease infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52,211,153,.5); }
+      50%      { opacity: .7; box-shadow: 0 0 0 6px rgba(52,211,153,0); }
+    }
+
+    /* =============================
+       GRID
+    ============================= */
+    .grid-main {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 20px;
+    }
+
+    .col-left { display: flex; flex-direction: column; gap: 20px; }
+    .col-right { display: flex; flex-direction: column; gap: 20px; }
+
+    /* =============================
+       CARD
+    ============================= */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+      transition: var(--trans);
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.07), transparent);
+    }
+
+    .card:hover { border-color: #3a4a66; }
+
+    .card-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    .card-label .icon { font-size: 14px; }
+
+    /* Tooltip */
+    .tooltip-wrap { position: relative; display: inline-block; }
+    .tooltip-wrap .tip {
+      visibility: hidden; opacity: 0;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%; transform: translateX(-50%);
+      background: #2a3347;
+      color: var(--text);
+      font-size: 12px;
+      padding: 7px 12px;
+      border-radius: 8px;
+      width: 200px;
+      text-align: center;
+      white-space: normal;
+      line-height: 1.4;
+      pointer-events: none;
+      transition: var(--trans);
+      z-index: 99;
+      border: 1px solid var(--border);
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .tooltip-wrap:hover .tip { visibility: visible; opacity: 1; }
+    .help-icon { cursor: help; color: var(--muted); font-size: 13px; }
+
+    /* =============================
+       INPUT SECTION
+    ============================= */
+    .input-card { background: var(--surface); }
+
+    textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      resize: vertical;
+      min-height: 110px;
+      transition: var(--trans);
+      outline: none;
+      line-height: 1.6;
+    }
+
+    textarea::placeholder { color: var(--muted); }
+
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(240,160,75,.12);
+      background: #1e2535;
+    }
+
+    .input-footer {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .char-count { font-size: 12px; color: var(--muted); }
+
+    .btn-analyze {
+      display: flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, var(--accent), #e07b24);
+      color: #0d1117;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 26px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--trans);
+      box-shadow: 0 4px 18px rgba(240,160,75,.3);
+    }
+
+    .btn-analyze:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(240,160,75,.45);
+    }
+
+    .btn-analyze:active { transform: translateY(0); }
+
+    .btn-analyze.loading { opacity: .7; pointer-events: none; }
+
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(0,0,0,.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* =============================
+       AI RESPONSE
+    ============================= */
+    .response-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent2);
+      border-radius: 10px;
+      padding: 18px 20px;
+      min-height: 90px;
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.7;
+      position: relative;
+    }
+
+    .response-placeholder {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      width: 2px; height: 16px;
+      background: var(--accent2);
+      border-radius: 1px;
+      vertical-align: text-bottom;
+      animation: blink .7s step-end infinite;
+      margin-left: 2px;
+    }
+
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+    /* =============================
+       SENTIMENT
+    ============================= */
+    .sentiment-row {
+      display: flex; gap: 10px;
+    }
+
+    .sent-chip {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 6px;
+      padding: 14px 10px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: var(--surface2);
+      cursor: default;
+      transition: var(--trans);
+    }
+
+    .sent-chip .emoji { font-size: 22px; }
+    .sent-chip .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+
+    .sent-chip.active-pos { border-color: var(--pos); background: rgba(52,211,153,.1); }
+    .sent-chip.active-neu { border-color: var(--neu); background: rgba(251,191,36,.1); }
+    .sent-chip.active-neg { border-color: var(--neg); background: rgba(248,113,113,.1); }
+
+    .sent-chip.active-pos .label { color: var(--pos); }
+    .sent-chip.active-neu .label { color: var(--neu); }
+    .sent-chip.active-neg .label { color: var(--neg); }
+
+    /* =============================
+       INTENT
+    ============================= */
+    .intent-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .intent-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      border-radius: 99px;
+      border: 1.5px solid var(--border);
+      background: var(--surface2);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: var(--trans);
+    }
+
+    .intent-chip.active {
+      border-color: var(--accent3);
+      background: rgba(167,139,250,.12);
+      color: var(--accent3);
+    }
+
+    /* =============================
+       KEYWORDS
+    ============================= */
+    .keywords-wrap { display: flex; flex-wrap: wrap; gap: 8px; min-height: 36px; }
+
+    .kw-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(94,234,212,.1);
+      border: 1px solid rgba(94,234,212,.3);
+      color: var(--accent2);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: var(--trans);
+      animation: tagPop .3s cubic-bezier(.34,1.56,.64,1);
+    }
+
+    @keyframes tagPop {
+      from { transform: scale(.6); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+
+    .kw-tag:hover { transform: scale(1.04); }
+    .kw-tag .kw-type { font-size: 10px; opacity: .6; }
+
+    /* =============================
+       CONFIDENCE
+    ============================= */
+    .conf-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .conf-pct {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2.4rem;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .conf-bar-track {
+      width: 100%;
+      height: 8px;
+      background: var(--surface2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .conf-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+      transition: width .8s cubic-bezier(.4,0,.2,1);
+      width: 0%;
+    }
+
+    .conf-label { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+    /* =============================
+       MINI CHART — Sentiment breakdown
+    ============================= */
+    .chart-wrap {
+      display: flex; align-items: flex-end; gap: 6px;
+      height: 80px;
+      margin-top: 4px;
+    }
+
+    .chart-bar-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+
+    .chart-bar {
+      width: 100%;
+      border-radius: 6px 6px 0 0;
+      transition: height .8s cubic-bezier(.4,0,.2,1);
+      min-height: 4px;
+    }
+
+    .chart-bar-label { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+    .chart-bar-val   { font-size: 11px; color: var(--text); font-weight: 600; }
+
+    /* =============================
+       HISTORY
+    ============================= */
+    .history-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .hist-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      transition: var(--trans);
+      cursor: pointer;
+    }
+
+    .hist-item:hover { border-color: #3a4a66; background: #1e2535; }
+
+    .hist-q {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      margin-bottom: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .hist-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+
+    .hist-sent-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    /* =============================
+       PROCESSING OVERLAY
+    ============================= */
+    .processing-bar {
+      height: 2px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 20px;
+      opacity: 0;
+      transition: opacity .3s;
+    }
+
+    .processing-bar.active { opacity: 1; }
+
+    .processing-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+      border-radius: 99px;
+      transition: width .1s linear;
+    }
+
+    /* =============================
+       EMPTY STATE
+    ============================= */
+    .empty-state {
+      color: var(--muted);
+      font-size: 13px;
+      font-style: italic;
+    }
+
+    /* =============================
+       RESPONSIVE
+    ============================= */
+    @media (max-width: 900px) {
+      .grid-main { grid-template-columns: 1fr; }
+      .col-right { order: -1; }
+      .sentiment-row { flex-wrap: wrap; }
+    }
+
+    @media (max-width: 560px) {
+      .shell { padding: 0 14px 40px; }
+      header { padding: 24px 0 20px; }
+      .conf-pct { font-size: 2rem; }
+    }
+
+    /* =============================
+       FADE-IN ANIMATION
+    ============================= */
+    .fade-in {
+      animation: fadeIn .5s ease forwards;
+      opacity: 0;
+    }
+
+    @keyframes fadeIn { to { opacity: 1; } }
+
+    /* Stagger cards */
+    .card:nth-child(1) { animation-delay: .05s; }
+    .card:nth-child(2) { animation-delay: .10s; }
+    .card:nth-child(3) { animation-delay: .15s; }
+    .card:nth-child(4) { animation-delay: .20s; }
+    .card:nth-child(5) { animation-delay: .25s; }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ======= HEADER ======= -->
+  <header>
+    <div class="logo-wrap">
+      <div class="logo-icon">🧠</div>
+      <h1>AI Language <span>Insights</span> Dashboard</h1>
+    </div>
+    <div class="header-badge">
+      <div class="pulse-dot"></div>
+      Model Active &amp; Ready
+    </div>
+  </header>
+
+  <!-- Processing bar (top of content area) -->
+  <div class="processing-bar" id="procBar">
+    <div class="processing-fill" id="procFill"></div>
+  </div>
+
+  <div class="grid-main">
+
+    <!-- ============================================================
+         LEFT COLUMN
+    ============================================================ -->
+    <div class="col-left">
+
+      <!-- A. INPUT SECTION -->
+      <div class="card fade-in">
+        <div class="card-label">
+          <span class="icon">✏️</span>
+          Your Input
+          <div class="tooltip-wrap">
+            <span class="help-icon">ⓘ</span>
+            <div class="tip">Type any sentence, question, or message here and click "Analyze Text" to see how the AI understands it.</div>
+          </div>
+        </div>
+        <textarea id="userInput" placeholder="Try something like: 'I'm really frustrated with the slow delivery of my order.'" maxlength="500"></textarea>
+        <div class="input-footer">
+          <span class="char-count"><span id="charCount">0</span> / 500 characters</span>
+          <button class="btn-analyze" id="analyzeBtn" onclick="analyzeText()">
+            <div class="spinner" id="spinner"></div>
+            <span id="btnText">✦ Analyze Text</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- B. AI RESPONSE SECTION -->
+      <div class="card fade-in">
+        <div class="card-label">
+          <span class="icon">💬</span>
+          AI Understanding
+          <div class="tooltip-wrap">
+            <span class="help-icon">ⓘ</span>
+            <div class="tip">This is what the AI understood from your message and how it would respond.</div>
+          </div>
+        </div>
+        <div class="response-box" id="responseBox">
+          <span class="response-placeholder">Your AI response will appear here after analysis…</span>
+        </div>
+      </div>
+
+      <!-- C. SENTIMENT + CHART ROW -->
+      <div class="card fade-in">
+        <div class="card-label">
+          <span class="icon">🎭</span>
+          Emotional Tone (Sentiment)
+          <div class="tooltip-wrap">
+            <span class="help-icon">ⓘ</span>
+            <div class="tip">Sentiment tells you whether the message sounds positive, neutral, or negative — like a mood detector for text.</div>
+          </div>
+        </div>
+        <div class="sentiment-row" id="sentRow">
+          <div class="sent-chip" id="sent-pos">
+            <span class="emoji">😊</span>
+            <span class="label">Positive</span>
+          </div>
+          <div class="sent-chip" id="sent-neu">
+            <span class="emoji">😐</span>
+            <span class="label">Neutral</span>
+          </div>
+          <div class="sent-chip" id="sent-neg">
+            <span class="emoji">😠</span>
+            <span class="label">Negative</span>
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <div class="card-label" style="margin-bottom:8px; font-size:10px">
+            Sentiment Breakdown Chart
+          </div>
+          <div class="chart-wrap" id="sentChart">
+            <div class="chart-bar-col">
+              <div class="chart-bar-val" id="cv-pos">—</div>
+              <div class="chart-bar" id="cb-pos" style="background:var(--pos);height:4px;"></div>
+              <div class="chart-bar-label">😊</div>
+            </div>
+            <div class="chart-bar-col">
+              <div class="chart-bar-val" id="cv-neu">—</div>
+              <div class="chart-bar" id="cb-neu" style="background:var(--neu);height:4px;"></div>
+              <div class="chart-bar-label">😐</div>
+            </div>
+            <div class="chart-bar-col">
+              <div class="chart-bar-val" id="cv-neg">—</div>
+              <div class="chart-bar" id="cb-neg" style="background:var(--neg);height:4px;"></div>
+              <div class="chart-bar-label">😠</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- D. INTENT DETECTION -->
+      <div class="card fade-in">
+        <div class="card-label">
+          <span class="icon">🎯</span>
+          What Do You Want? (Intent)
+          <div class="tooltip-wrap">
+            <span class="help-icon">ⓘ</span>
+            <div class="tip">Intent is the AI's guess about the purpose of your message — are you asking a question, making a complaint, or requesting something?</div>
+          </div>
+        </div>
+        <div class="intent-grid" id="intentGrid">
+          <div class="intent-chip" id="int-question">❓ Question</div>
+          <div class="intent-chip" id="int-complaint">😤 Complaint</div>
+          <div class="intent-chip" id="int-request">🙋 Request</div>
+          <div class="intent-chip" id="int-feedback">💡 Feedback</div>
+          <div class="intent-chip" id="int-greeting">👋 Greeting</div>
+          <div class="intent-chip" id="int-statement">📢 Statement</div>
+        </div>
+      </div>
+
+    </div><!-- /col-left -->
+
+    <!-- ============================================================
+         RIGHT COLUMN
+    ============================================================ -->
+    <div class="col-right">
+
+      <!-- F. CONFIDENCE SCORE -->
+      <div class="card fade-in">
+        <div class="card-label">
+          <span class="icon">📊</span>
+          Confidence Level
+          <div class="tooltip-wrap">
+            <span class="help-icon">ⓘ</span>
+            <div class="tip">How sure is the AI about its analysis? Higher is more certain. Below 50% means the message was tricky to understand.</div>
+          </div>
+        </div>
+        <div class="conf-row">
+          <div class="conf-pct" id="confPct">—</div>
+          <span style="font-size:22px" id="confEmoji">🤔</span>
+        </div>
+        <div class="conf-bar-track">
+          <div class="conf-bar-fill" id="confBar"></div>
+        </div>
+        <div class="conf-label" id="confLabel">Run an analysis to see the confidence score.</div>
+      </div>
+
+      <!-- E. KEYWORDS / ENTITIES -->
+      <div class="card fade-in">
+        <div class="card-label">
+          <span class="icon">🏷️</span>
+          Key Words &amp; Topics
+          <div class="tooltip-wrap">
+            <span class="help-icon">ⓘ</span>
+            <div class="tip">These are the most important words and topics the AI spotted in your message — like a highlight reel of your text.</div>
+          </div>
+        </div>
+        <div class="keywords-wrap" id="keywordsWrap">
+          <span class="empty-state">Keywords will appear here…</span>
+        </div>
+      </div>
+
+      <!-- G. ACTIVITY / HISTORY -->
+      <div class="card fade-in" style="flex:1">
+        <div class="card-label">
+          <span class="icon">🕒</span>
+          Recent Activity
+          <div class="tooltip-wrap">
+            <span class="help-icon">ⓘ</span>
+            <div class="tip">Your last few analyses are saved here so you can quickly compare how the AI read different messages.</div>
+          </div>
+        </div>
+        <div class="history-list" id="historyList">
+          <span class="empty-state">No history yet — run your first analysis!</span>
+        </div>
+      </div>
+
+    </div><!-- /col-right -->
+
+  </div><!-- /grid-main -->
+</div><!-- /shell -->
+
+<script>
+/* =============================================================
+   MOCK DATA — Realistic simulation of AI analysis
+============================================================= */
+
+// Predefined patterns mapped to keywords in the user's text
+const mockPatterns = [
+  {
+    match: ['frustrated','angry','annoyed','terrible','horrible','worst','hate','awful','poor','bad','slow','delay','late'],
+    sentiment: 'negative',
+    scores: { pos: 8, neu: 22, neg: 70 },
+    intent: 'complaint',
+    confidence: 92,
+    response: "I can sense some frustration in your message. It sounds like you're experiencing an issue that needs to be resolved quickly. The AI detected a complaint about a service or experience — typically the next step would be to route this to a support team."
+  },
+  {
+    match: ['great','love','amazing','wonderful','excellent','happy','thank','thanks','appreciate','perfect','awesome','fantastic'],
+    sentiment: 'positive',
+    scores: { pos: 82, neu: 14, neg: 4 },
+    intent: 'feedback',
+    confidence: 95,
+    response: "Your message has a very positive tone — the AI picked up genuine satisfaction or appreciation here. Positive feedback like this is valuable for understanding what's working well. Great input!"
+  },
+  {
+    match: ['what','how','when','where','why','who','which','can you','do you','does','is there','are there','?'],
+    sentiment: 'neutral',
+    scores: { pos: 20, neu: 68, neg: 12 },
+    intent: 'question',
+    confidence: 88,
+    response: "You seem to be asking a question. The AI identified this as an information-seeking message. In a real system, it would search its knowledge base to find the most accurate and helpful answer for you."
+  },
+  {
+    match: ['please','could you','can you help','i need','i want','i would like','request','send me','give me','provide'],
+    sentiment: 'neutral',
+    scores: { pos: 30, neu: 60, neg: 10 },
+    intent: 'request',
+    confidence: 84,
+    response: "It looks like you're making a request for something specific. The AI identified a clear action you'd like to happen. In a full system, this would be routed to the right department or automated workflow to fulfill your request."
+  },
+  {
+    match: ['hello','hi','hey','good morning','good afternoon','good evening','howdy','greetings'],
+    sentiment: 'positive',
+    scores: { pos: 75, neu: 22, neg: 3 },
+    intent: 'greeting',
+    confidence: 97,
+    response: "Hello there! 👋 The AI recognized a friendly greeting. This is typically the start of a conversation. A real AI assistant would warmly welcome you and ask how it can help today."
+  }
+];
+
+// Fallback / default mock result
+const defaultMock = {
+  sentiment: 'neutral',
+  scores: { pos: 30, neu: 58, neg: 12 },
+  intent: 'statement',
+  confidence: 74,
+  response: "Interesting input! The AI processed your message and found it to be a general statement. While no strong emotional signals were detected, the key topics and context were extracted. This kind of message is common in everyday conversation."
+};
+
+// Keyword extractor — picks meaningful words (4+ chars, not stopwords)
+const STOPWORDS = new Set(['this','that','with','have','from','they','been','were','will','what','when','where','your','their','there','about','which','would','could','should','also','just','more','most','some','than','into','then','only','very','much','such','over','after','before','other','each','both','like','even','many','does','did','its','our','all','are','the','and','but','for','not','you','his','her','she','him','how','can','has','had','may','any','was','one','out','who','get','got','let','now','yet','per','via','due','own','new','old','too','why']);
+
+function extractKeywords(text) {
+  const words = text.replace(/[^a-zA-Z\s]/g, '').toLowerCase().split(/\s+/);
+  const types = ['Topic', 'Entity', 'Action', 'Concept'];
+  const seen = new Set();
+  return words
+    .filter(w => w.length >= 4 && !STOPWORDS.has(w))
+    .filter(w => { if(seen.has(w)) return false; seen.add(w); return true; })
+    .slice(0, 8)
+    .map((w, i) => ({ word: w, type: types[i % types.length] }));
+}
+
+function detectMock(text) {
+  const lower = text.toLowerCase();
+  for(const p of mockPatterns) {
+    if(p.match.some(kw => lower.includes(kw))) return p;
+  }
+  return defaultMock;
+}
+
+/* =============================================================
+   HISTORY
+============================================================= */
+let history = [];
+
+const SENT_COLORS = { positive: 'var(--pos)', neutral: 'var(--neu)', negative: 'var(--neg)' };
+const SENT_LABELS = { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😠 Negative' };
+const INTENT_ICONS = {
+  question: '❓', complaint: '😤', request: '🙋',
+  feedback: '💡', greeting: '👋', statement: '📢'
+};
+const CONF_LABELS = {
+  high: 'Very confident — the AI has a strong understanding of your message.',
+  mid:  'Fairly confident — the AI understood most of your message.',
+  low:  'Less certain — the message was a bit ambiguous or complex.'
+};
+
+/* =============================================================
+   MAIN ANALYZE FUNCTION
+============================================================= */
+async function analyzeText() {
+  const input = document.getElementById('userInput').value.trim();
+  if(!input) {
+    flashInput();
+    return;
+  }
+
+  setLoading(true);
+  await simulateDelay(1600);
+
+  const mock = detectMock(input);
+  const keywords = extractKeywords(input);
+
+  updateResponse(mock.response);
+  updateSentiment(mock.sentiment, mock.scores);
+  updateIntent(mock.intent);
+  updateKeywords(keywords);
+  updateConfidence(mock.confidence);
+  addHistory(input, mock);
+
+  setLoading(false);
+}
+
+function flashInput() {
+  const ta = document.getElementById('userInput');
+  ta.style.borderColor = 'var(--neg)';
+  ta.style.boxShadow = '0 0 0 3px rgba(248,113,113,.18)';
+  ta.placeholder = 'Please type something first… ✍️';
+  setTimeout(() => {
+    ta.style.borderColor = '';
+    ta.style.boxShadow = '';
+    ta.placeholder = "Try something like: 'I'm really frustrated with the slow delivery of my order.'";
+  }, 2000);
+}
+
+/* ---- Loading state ---- */
+function setLoading(on) {
+  const btn = document.getElementById('analyzeBtn');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btnText');
+  const bar = document.getElementById('procBar');
+  const fill = document.getElementById('procFill');
+
+  if(on) {
+    btn.classList.add('loading');
+    spinner.style.display = 'block';
+    btnText.textContent = 'Analyzing…';
+    bar.classList.add('active');
+    animateBar(fill);
+  } else {
+    btn.classList.remove('loading');
+    spinner.style.display = 'none';
+    btnText.textContent = '✦ Analyze Text';
+    bar.classList.remove('active');
+    fill.style.width = '0%';
+    fill.style.transition = 'none';
+  }
+}
+
+function animateBar(fill) {
+  fill.style.transition = 'none';
+  fill.style.width = '0%';
+  setTimeout(() => {
+    fill.style.transition = 'width 1.4s cubic-bezier(.4,0,.2,1)';
+    fill.style.width = '95%';
+  }, 30);
+}
+
+function simulateDelay(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+/* ---- Response typewriter ---- */
+function updateResponse(text) {
+  const box = document.getElementById('responseBox');
+  box.innerHTML = '';
+  let i = 0;
+  const cursor = document.createElement('span');
+  cursor.className = 'typing-cursor';
+  box.appendChild(cursor);
+
+  const interval = setInterval(() => {
+    if(i < text.length) {
+      box.insertBefore(document.createTextNode(text[i++]), cursor);
+    } else {
+      clearInterval(interval);
+      cursor.remove();
+    }
+  }, 18);
+}
+
+/* ---- Sentiment ---- */
+function updateSentiment(sentiment, scores) {
+  ['pos','neu','neg'].forEach(s => {
+    document.getElementById('sent-'+s).className = 'sent-chip';
+  });
+  const map = { positive:'pos', neutral:'neu', negative:'neg' };
+  document.getElementById('sent-'+map[sentiment]).className = 'sent-chip active-'+map[sentiment];
+
+  // Update chart
+  const max = Math.max(scores.pos, scores.neu, scores.neg);
+  const trackH = 56; // px
+  ['pos','neu','neg'].forEach(k => {
+    const pct = scores[k];
+    const h = Math.max(4, (pct/100)*trackH);
+    const bar = document.getElementById('cb-'+k);
+    const val = document.getElementById('cv-'+k);
+    bar.style.height = '4px';
+    setTimeout(() => { bar.style.height = h+'px'; }, 50);
+    val.textContent = pct+'%';
+  });
+}
+
+/* ---- Intent ---- */
+function updateIntent(intent) {
+  ['question','complaint','request','feedback','greeting','statement'].forEach(id => {
+    document.getElementById('int-'+id).className = 'intent-chip';
+  });
+  document.getElementById('int-'+intent).className = 'intent-chip active';
+}
+
+/* ---- Keywords ---- */
+function updateKeywords(keywords) {
+  const wrap = document.getElementById('keywordsWrap');
+  wrap.innerHTML = '';
+  if(!keywords.length) {
+    wrap.innerHTML = '<span class="empty-state">No significant keywords found.</span>';
+    return;
+  }
+  keywords.forEach((kw, i) => {
+    const tag = document.createElement('div');
+    tag.className = 'kw-tag';
+    tag.style.animationDelay = (i * 60)+'ms';
+    tag.innerHTML = `${kw.word} <span class="kw-type">${kw.type}</span>`;
+    wrap.appendChild(tag);
+  });
+}
+
+/* ---- Confidence ---- */
+function updateConfidence(pct) {
+  document.getElementById('confPct').textContent = pct+'%';
+  document.getElementById('confBar').style.width = pct+'%';
+
+  let emoji = '🤩', level = 'high';
+  if(pct < 50) { emoji = '🤔'; level = 'low'; }
+  else if(pct < 75) { emoji = '🙂'; level = 'mid'; }
+
+  document.getElementById('confEmoji').textContent = emoji;
+  document.getElementById('confLabel').textContent = CONF_LABELS[level];
+}
+
+/* ---- History ---- */
+function addHistory(input, mock) {
+  history.unshift({ q: input, sentiment: mock.sentiment, intent: mock.intent, conf: mock.confidence });
+  if(history.length > 5) history.pop();
+
+  const list = document.getElementById('historyList');
+  list.innerHTML = '';
+  history.forEach((h, i) => {
+    const item = document.createElement('div');
+    item.className = 'hist-item';
+    item.style.animationDelay = (i*40)+'ms';
+    item.innerHTML = `
+      <div class="hist-q">${h.q}</div>
+      <div class="hist-meta">
+        <div class="hist-sent-dot" style="background:${SENT_COLORS[h.sentiment]}"></div>
+        ${SENT_LABELS[h.sentiment]} &nbsp;·&nbsp;
+        ${INTENT_ICONS[h.intent]} ${h.intent.charAt(0).toUpperCase()+h.intent.slice(1)} &nbsp;·&nbsp;
+        📊 ${h.conf}% confidence
+      </div>
+    `;
+    // Click to re-load
+    item.addEventListener('click', () => {
+      document.getElementById('userInput').value = h.q;
+      updateCharCount();
+      document.getElementById('userInput').focus();
+    });
+    list.appendChild(item);
+  });
+}
+
+/* ---- Char counter ---- */
+function updateCharCount() {
+  const len = document.getElementById('userInput').value.length;
+  document.getElementById('charCount').textContent = len;
+}
+
+document.getElementById('userInput').addEventListener('input', updateCharCount);
+
+// Allow Ctrl+Enter to analyze
+document.getElementById('userInput').addEventListener('keydown', e => {
+  if((e.ctrlKey || e.metaKey) && e.key === 'Enter') analyzeText();
+});
+</script>
+</body>
+</html>
